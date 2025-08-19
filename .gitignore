@@ -1,0 +1,74 @@
+# === Виртуальные окружения ===
+venv/
+env/
+envs/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# === Локальные конфиги и секреты ===
+.env
+.env.local
+.env.development
+.env.production
+*.env
+secrets/
+config.json
+*.pem
+*.key
+*.crt
+
+# === Логи ===
+logs/
+*.log
+
+# === IDE и редакторы ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# === Базы данных (если используются локальные) ===
+*.sqlite3
+*.db
+migrations/versions/*.py  # если Alembic — можно исключить только сгенерированные миграции, но лучше их коммитить
+
+# === Docker ===
+docker-compose.override.yml
+.dockerignore
+
+# === Python-зависимости (но requirements.txt — НЕ игнорируем!) ===
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+*.tar.gz
+
+# === Тесты ===
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# === FastAPI / Starlette (временные файлы) ===
+# FastAPI не создаёт своих временных файлов, но если используете:
+# - временные файлы загрузки — исключите папки вроде uploads/, tmp/
+uploads/
+tmp/
+temp/
