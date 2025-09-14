@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.depends import CurrentUser
 from app.model import User, UserWord
+from app.schema import RegisterFormSchema, LoginFormSchema
 from app.utils.flash import flash, get_flashed_messages
 
 auth_router = APIRouter()
@@ -36,9 +37,14 @@ def register_page(request: Request):
 
 
 @auth_router.post('/register')
-def register(request: Request, user: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    password_hash = get_password_hash(password)
-    new_user = User(user=user, password_hash=password_hash)
+def register(request: Request, create_user : RegisterFormSchema = Depends(RegisterFormSchema.as_form), db: Session = Depends(get_db)):
+    existing_user = db.query(User).where(User.user == create_user.user).first()
+    if existing_user:
+        flash(request, "Пользователь с таким именем уже существует", "error")
+        return templates.TemplateResponse("register.html", {"request": request})
+
+    password_hash = get_password_hash(create_user.password)
+    new_user = User(user=create_user.user, password_hash=password_hash)
     db.add(new_user)
     db.commit()
     flash(request, "Регистрация успешна! Теперь войдите в систему.", "success")
@@ -52,10 +58,10 @@ def login_page(request: Request):
 
 
 @auth_router.post('/login')
-def login(request: Request, user: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    stmt = select(User).where(User.user == user)
+def login(request: Request, login_data: LoginFormSchema = Depends(LoginFormSchema.as_form), db: Session = Depends(get_db)):
+    stmt = select(User).where(User.user == login_data.user)
     get_user = db.execute(stmt).scalar_one_or_none()
-    if not get_user or not verify_password(password, get_user.password_hash):
+    if not get_user or not verify_password(login_data.password, get_user.password_hash):
         flash(request, "Неверное имя пользователя или пароль", "error")
         return templates.TemplateResponse("login.html", {
             "request": request,
@@ -76,5 +82,6 @@ def dashboard(request: Request, user_id: CurrentUser, db: Session = Depends(get_
 @auth_router.get('/logout', response_class=HTMLResponse)
 def logout(request: Request):
     flash(request, "Вы вышли из системы!", "success")
-    request.session.clear()
+    if "user_id" in request.session:
+        del request.session["user_id"]
     return RedirectResponse(url="/login", status_code=303)

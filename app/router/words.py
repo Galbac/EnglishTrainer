@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.depends import CurrentUser
 from app.model import Word, UserWord
+from app.utils.flash import flash
 
 words_router = APIRouter()
 templates = Jinja2Templates("app/templates")
@@ -25,28 +26,38 @@ def add_word_page(request: Request):
 
 
 @words_router.post("/add_word")
-def add_word(request: Request, user_id: CurrentUser, english: str = Form(...), russian: str = Form(...),
-             db: Session = Depends(get_db)):
-    # Проверим, есть ли слово в базе
-    word = db.query(Word).filter(Word.english == english).first()
-    if not word:
-        word = Word(english=english, russian=russian)
-        db.add(word)
-        db.commit()
-        db.refresh(word)
+def add_word(
+        request: Request,
+        user_id: CurrentUser,
+        english: str = Form(...),
+        russian: str = Form(...),
+        db: Session = Depends(get_db)
+):
+    try:
+        word = db.query(Word).filter(Word.english == english.strip()).first()
+        if not word:
+            word = Word(english=english.strip(), russian=russian.strip())
+            db.add(word)
+            db.flush()  # чтобы получить id без commit
 
-    # Связываем слово с пользователем (если ещё не добавлено)
-    user_word = db.query(UserWord).filter_by(user_id=user_id, word_id=word.id).first()
-    if not user_word:
-        user_word = UserWord(user_id=user_id, word_id=word.id, progress=0)
-        db.add(user_word)
-        db.commit()
+        user_word = db.query(UserWord).filter_by(user_id=user_id, word_id=word.id).first()
+        if not user_word:
+            user_word = UserWord(user_id=user_id, word_id=word.id, progress=0)
+            db.add(user_word)
 
-    return RedirectResponse('/dashboard', status_code=303)
+        db.commit()
+        flash(request, "Слово добавлено!", "success")
+        return RedirectResponse('/dashboard', status_code=303)
+
+    except Exception as e:
+        db.rollback()
+        flash(request, "Ошибка при добавлении слова. Попробуйте ещё раз.", "error")
+        return templates.TemplateResponse("add_word.html", {"request": request})
 
 
 @words_router.get('/test', response_class=HTTPResponse)
 def test_page(request: Request, user_id: CurrentUser, db: Session = Depends(get_db)):
+
     user_words = db.query(UserWord).filter_by(user_id=user_id).all()
     if not user_words:
         return templates.TemplateResponse('test.html', {'request': request, 'word': None})
