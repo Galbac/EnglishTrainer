@@ -1,0 +1,31 @@
+<!-- app/templates/add_word.html -->
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card shadow-lg border-0">
+      <div class="card-header bg-white text-center pb-0">
+        <h3><i class="bi bi-pen-fill text-success"></i> Add New Word</h3>
+      </div>
+      <div class="card-body p-4">
+        <form method="post">
+          <div class="mb-3">
+            <label for="english" class="form-label">English</label>
+            <input type="text" class="form-control form-control-lg" id="english" name="english" placeholder="e.g. Hello" required>
+          </div>
+          <div class="mb-3">
+            <label for="russian" class="form-label">Russian</label>
+            <input type="text" class="form-control form-control-lg" id="russian" name="russian" placeholder="e.g. Привет" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 btn-lg">
+            <i class="bi bi-check2-circle"></i> Add Word
+          </button>
+        </form>
+      </div>
+      <div class="card-footer text-center">
+        <a href="/dashboard" class="text-muted"><small>← Back to Dashboard</small></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

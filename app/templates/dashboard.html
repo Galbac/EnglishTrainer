@@ -1,0 +1,47 @@
+<!-- app/templates/dashboard.html -->
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center mb-5">
+  <h1 class="display-5 fw-bold text-primary">Welcome, {{ user.user }}!</h1>
+  <p class="text-muted">Let’s master English together 💪</p>
+</div>
+
+<div class="row g-4">
+  {% for uw in words %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <div class="card shadow-sm h-100 border-0">
+      <div class="card-body text-center p-4">
+        <h5 class="card-title text-primary fw-bold">{{ uw.word.english }}</h5>
+        <p class="card-text text-muted">{{ uw.word.russian }}</p>
+        <div class="progress mb-2">
+          {% set bar_class = "bg-danger" if uw.progress < 40 else "bg-warning" if uw.progress < 80 else "bg-success" %}
+          <div class="progress-bar {{ bar_class }}" role="progressbar"
+               style="width: {{ uw.progress }}%"
+               aria-valuenow="{{ uw.progress }}" aria-valuemin="0" aria-valuemax="100">
+            {{ uw.progress }}%
+          </div>
+        </div>
+        <small class="text-muted">
+          {% if uw.progress < 40 %}
+            🔹 Начинаем
+          {% elif uw.progress < 80 %}
+            🔹 Учим
+          {% else %}
+            ✅ Запомнено
+          {% endif %}
+        </small>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="mt-5 text-center">
+  <a href="/add_word" class="btn btn-outline-primary me-3 px-4">
+    <i class="bi bi-plus-circle"></i> Add Word
+  </a>
+  <a href="/test" class="btn btn-success px-4">
+    <i class="bi bi-clipboard-check"></i> Take Test
+  </a>
+</div>
+{% endblock %}

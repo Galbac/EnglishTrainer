@@ -1,0 +1,37 @@
+<!-- app/templates/test.html -->
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card shadow-sm border-0 text-center p-5">
+      <h2><i class="bi bi-question-circle text-info"></i> Translation Test</h2>
+      {% if not word %}
+        <p class="text-muted mt-4">You have no words yet. <a href="/add_word">Add some!</a></p>
+      {% else %}
+        <form method="post" class="mt-4">
+          <input type="hidden" name="userword_id" value="{{ word.id }}">
+          <input type="hidden" name="mode" value="{{ mode }}">
+
+          {% if mode == 'en->ru' %}
+            <p class="fs-5">Translate into Russian:</p>
+            <h3 class="text-primary">{{ word.word.english }}</h3>
+          {% else %}
+            <p class="fs-5">Translate into English:</p>
+            <h3 class="text-primary">{{ word.word.russian }}</h3>
+          {% endif %}
+
+          <div class="mt-4">
+            <input type="text" class="form-control form-control-lg text-center" name="answer" placeholder="Your answer..." required>
+          </div>
+          <button type="submit" class="btn btn-success btn-lg mt-3 px-5">
+            Check <i class="bi bi-check2"></i>
+          </button>
+        </form>
+      {% endif %}
+      <div class="mt-4">
+        <a href="/dashboard" class="text-muted"><small>← Back to Dashboard</small></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
