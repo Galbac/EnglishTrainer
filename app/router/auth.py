@@ -1,8 +1,8 @@
 # app/router/auth.py
+from datetime import datetime
 
 from fastapi import APIRouter
 from fastapi import Depends
-from fastapi import Form
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -37,7 +37,8 @@ def register_page(request: Request):
 
 
 @auth_router.post('/register')
-def register(request: Request, create_user : RegisterFormSchema = Depends(RegisterFormSchema.as_form), db: Session = Depends(get_db)):
+def register(request: Request, create_user: RegisterFormSchema = Depends(RegisterFormSchema.as_form),
+             db: Session = Depends(get_db)):
     existing_user = db.query(User).where(User.user == create_user.user).first()
     if existing_user:
         flash(request, "Пользователь с таким именем уже существует", "error")
@@ -58,7 +59,8 @@ def login_page(request: Request):
 
 
 @auth_router.post('/login')
-def login(request: Request, login_data: LoginFormSchema = Depends(LoginFormSchema.as_form), db: Session = Depends(get_db)):
+def login(request: Request, login_data: LoginFormSchema = Depends(LoginFormSchema.as_form),
+          db: Session = Depends(get_db)):
     stmt = select(User).where(User.user == login_data.user)
     get_user = db.execute(stmt).scalar_one_or_none()
     if not get_user or not verify_password(login_data.password, get_user.password_hash):
@@ -75,7 +77,15 @@ def login(request: Request, login_data: LoginFormSchema = Depends(LoginFormSchem
 def dashboard(request: Request, user_id: CurrentUser, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     words = db.query(UserWord).filter_by(user_id=user_id).all()
+    total_words = len(words)
+    mastered_words = sum(1 for word in words if word.progress >= 80)
+    last_reviewed = max((word.next_review for word in words), default=None)
+    pending_reviews = [word for word in words if word.next_review <= datetime.utcnow()]
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "words": words,
+                                                         "total_words": total_words,
+                                                         "mastered_words": mastered_words,
+                                                         "last_reviewed": last_reviewed,
+                                                         "pending_reviews": pending_reviews,
                                                          "messages": get_flashed_messages(request)})
 
 

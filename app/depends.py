@@ -2,17 +2,13 @@
 from typing import Annotated
 
 from fastapi import Request, Depends
-from fastapi.exceptions import HTTPException
+from fastapi.responses import RedirectResponse
 
 
 def get_current_user_id(request: Request):
     user_id = request.session.get("user_id")
     if not user_id:
-        raise HTTPException(
-            status_code=303,
-            detail="Перенаправление на страницу входа",
-            headers={"Location": "/login"}
-        )
+        return RedirectResponse(url="/login", status_code=303)
     return user_id
 
 

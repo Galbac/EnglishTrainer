@@ -1,5 +1,6 @@
-#app/router/words.py
+# app/router/words.py
 import random
+from datetime import datetime, timedelta, UTC
 from http.client import HTTPResponse
 
 from fastapi import APIRouter
@@ -57,7 +58,6 @@ def add_word(
 
 @words_router.get('/test', response_class=HTTPResponse)
 def test_page(request: Request, user_id: CurrentUser, db: Session = Depends(get_db)):
-
     user_words = db.query(UserWord).filter_by(user_id=user_id).all()
     if not user_words:
         return templates.TemplateResponse('test.html', {'request': request, 'word': None})
@@ -79,12 +79,23 @@ def check_answer(request: Request, user_id: CurrentUser, mode: str = Form(...),
         correct = user_word.word.russian.lower()
     elif mode == "ru->en":
         correct = user_word.word.english.lower()
+
     if answer.strip().lower() == correct:
+        user_word.easiness = max(1.3, user_word.easiness + (0.1 - (5 - user_word.progress) * 0.08))
+        if user_word.progress >= 80:
+            user_word.interval = max(1, int(user_word.interval * user_word.easiness))
+        else:
+            user_word.interval = 1
+        user_word.reviews_count += 1
+        user_word.next_review = datetime.now(UTC) + timedelta(days=user_word.interval)
         user_word.progress = min(100, user_word.progress + 10)
-        db.commit()
         result = "Верно"
     else:
+        user_word.easiness = max(1.3, user_word.easiness - 0.2)
+        user_word.interval = 0
+        user_word.next_review = datetime.now(UTC)
         user_word.progress = max(0, user_word.progress - 5)
-        db.commit()
         result = f"❌ Неверно! Правильный ответ: {correct}"
+
+    db.commit()
     return templates.TemplateResponse("test_result.html", {"request": request, "result": result})

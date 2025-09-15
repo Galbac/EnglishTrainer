@@ -1,47 +1,239 @@
 <!-- app/templates/dashboard.html -->
 {% extends "base.html" %}
+
 {% block content %}
-<div class="text-center mb-5">
-  <h1 class="display-5 fw-bold text-primary">Welcome, {{ user.user }}!</h1>
-  <p class="text-muted">Let’s master English together 💪</p>
-</div>
-
-<div class="row g-4">
-  {% for uw in words %}
-  <div class="col-12 col-md-6 col-lg-4">
-    <div class="card shadow-sm h-100 border-0">
-      <div class="card-body text-center p-4">
-        <h5 class="card-title text-primary fw-bold">{{ uw.word.english }}</h5>
-        <p class="card-text text-muted">{{ uw.word.russian }}</p>
-        <div class="progress mb-2">
-          {% set bar_class = "bg-danger" if uw.progress < 40 else "bg-warning" if uw.progress < 80 else "bg-success" %}
-          <div class="progress-bar {{ bar_class }}" role="progressbar"
-               style="width: {{ uw.progress }}%"
-               aria-valuenow="{{ uw.progress }}" aria-valuemin="0" aria-valuemax="100">
-            {{ uw.progress }}%
-          </div>
-        </div>
-        <small class="text-muted">
-          {% if uw.progress < 40 %}
-            🔹 Начинаем
-          {% elif uw.progress < 80 %}
-            🔹 Учим
-          {% else %}
-            ✅ Запомнено
-          {% endif %}
-        </small>
-      </div>
+<div class="text-center mb-6">
+    <h1 class="display-5 fw-bold text-primary">Добро пожаловать, {{ user.user }}!</h1>
+    <p class="lead text-muted mt-2">Ваш личный тренажёр английского языка 💬</p>
+    <div class="d-flex justify-content-center mt-3">
+        <span class="badge bg-success rounded-pill px-4 py-2 fs-6">
+            <i class="bi bi-star-fill text-warning me-1"></i>У вас {{ mastered_words }} освоенных слов
+        </span>
     </div>
-  </div>
-  {% endfor %}
 </div>
 
-<div class="mt-5 text-center">
-  <a href="/add_word" class="btn btn-outline-primary me-3 px-4">
-    <i class="bi bi-plus-circle"></i> Add Word
-  </a>
-  <a href="/test" class="btn btn-success px-4">
-    <i class="bi bi-clipboard-check"></i> Take Test
-  </a>
+<!-- Статистика прогресса -->
+<div class="row mb-6 g-4">
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-graph-up text-primary fs-3 me-3"></i>
+                    <h5 class="card-title mb-0">📊 Прогресс</h5>
+                </div>
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small class="text-muted">Всего слов</small>
+                        <strong>{{ total_words }}</strong>
+                    </div>
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar bg-info" role="progressbar"
+                             style="width {{ (mastered_words / total_words * 100)|round(0) }}%;"
+                             aria-valuenow="{{ (mastered_words / total_words * 100)|round(0) }}"
+                             aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Освоено</small>
+                        <strong class="text-success">{{ mastered_words }} ({{ (mastered_words / total_words *
+                            100)|round(1) }}%)</strong>
+                    </div>
+                </div>
+                {% if last_reviewed != "Никогда" %}
+                <div class="mt-auto pt-3 border-top">
+                    <small class="text-muted"><i class="bi bi-clock-history me-1"></i> Последнее повторение: {{
+                        last_reviewed.strftime('%d.%m.%Y %H:%M') if last_reviewed else "Никогда" }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Уведомление о повторениях -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 bg-gradient"
+             style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-bell-fill fs-3 me-3"></i>
+                    <h5 class="card-title mb-0">🔔 Напоминания</h5>
+                </div>
+                {% if pending_reviews|length > 0 %}
+                <p class="fs-5 mb-3">
+                    У вас <strong>{{ pending_reviews|length }}</strong> слов на повторение!
+                </p>
+                <a href="/test?category=pending" class="btn btn-light text-dark fw-semibold shadow-sm">
+                    Перейти к повторению →
+                </a>
+                {% else %}
+                <p class="fs-5 mb-3">Нет слов на повторение. Отлично!</p>
+                <a href="/test" class="btn btn-outline-light fw-semibold shadow-sm">
+                    Начать тест →
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Бонус: Рекомендация -->
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-lightbulb-fill text-warning fs-3 me-3"></i>
+                    <h5 class="card-title mb-0">💡 Совет дня</h5>
+                </div>
+                <p class="mb-4 fst-italic">
+                    “Лучше повторять 5 минут каждый день, чем 1 час раз в неделю.”
+                </p>
+                <a href="/add_word" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-plus-circle me-1"></i> Добавить новое слово
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Список слов -->
+<div class="row g-4 mb-6">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="h5 fw-bold text-secondary">Мои слова</h3>
+            <div class="d-flex gap-2">
+                <select class="form-select form-select-sm w-auto" id="filterWords" style="max-width: 180px;">
+                    <option value="all">Все слова</option>
+                    <option value="beginner">Начинаю (0–39%)</option>
+                    <option value="learning">Учу (40–79%)</option>
+                    <option value="mastered">Освоил (≥80%)</option>
+                </select>
+                <input type="text" class="form-control form-control-sm w-auto" id="searchWords" placeholder="Поиск..."
+                       style="max-width: 180px;">
+            </div>
+        </div>
+    </div>
+
+    {% if words|length == 0 %}
+    <div class="col-12 text-center py-5">
+        <i class="bi bi-book-half text-muted fs-1 mb-3"></i>
+        <h5 class="text-muted">Вы ещё не добавили ни одного слова</h5>
+        <p class="text-muted">Начните с добавления первых слов — и вы увидите свой прогресс!</p>
+        <a href="/add_word" class="btn btn-primary mt-3">Добавить первое слово</a>
+    </div>
+    {% else %}
+    {% for uw in words %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 hover-card">
+            <div class="card-body p-4 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title text-primary m-0">{{ uw.word.english }}</h5>
+                    <span class="badge {% if uw.progress >= 80 %}bg-success{% elif uw.progress >= 40 %}bg-warning{% else %}bg-danger{% endif %} fs-7 px-2 py-1">
+                            {{ uw.progress }}%
+                        </span>
+                </div>
+                <p class="card-text text-muted mb-3">{{ uw.word.russian }}</p>
+
+                <div class="progress mb-3 flex-grow-1" style="height: 8px;">
+                    <div class="progress-bar {% if uw.progress < 40 %}bg-danger{% elif uw.progress < 80 %}bg-warning{% else %}bg-success{% endif %}"
+                         role="progressbar"
+                         style="width {{ uw.progress }}%;"
+                         aria-valuenow="{{ uw.progress }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+
+                <small class="text-muted mt-auto">
+                    {% if uw.progress < 40 %}
+                    🔹 Начинаем
+                    {% elif uw.progress < 80 %}
+                    🔹 Учим
+                    {% else %}
+                    ✅ Запомнено
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Кнопки действий -->
+<div class="text-center mt-5 pb-5">
+    <a href="/add_word" class="btn btn-outline-primary btn-lg me-3 px-5">
+        <i class="bi bi-plus-circle me-2"></i> Добавить слово
+    </a>
+    <a href="/test" class="btn btn-success btn-lg px-5">
+        <i class="bi bi-clipboard-check me-2"></i> Пройти тест
+    </a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('searchWords');
+        const filterSelect = document.getElementById('filterWords');
+        const cards = document.querySelectorAll('.col-lg-4');
+
+        function filterWords() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filterValue = filterSelect.value;
+
+            cards.forEach(card => {
+                const english = card.querySelector('.card-title').textContent.toLowerCase();
+                const russian = card.querySelector('.card-text').textContent.toLowerCase();
+                const progress = parseInt(card.querySelector('.progress-bar').getAttribute('aria-valuenow'));
+
+                let matchSearch = !searchTerm || english.includes(searchTerm) || russian.includes(searchTerm);
+                let matchFilter = true;
+
+                if (filterValue === 'beginner') matchFilter = progress < 40;
+                else if (filterValue === 'learning') matchFilter = progress >= 40 && progress < 80;
+                else if (filterValue === 'mastered') matchFilter = progress >= 80;
+
+                card.style.display = (matchSearch && matchFilter) ? 'block' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterWords);
+        filterSelect.addEventListener('change', filterWords);
+    });
+</script>
+
+<style>
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .bg-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .progress-bar {
+        border-radius: 4px;
+    }
+
+    .badge {
+        font-weight: 600;
+    }
+
+    /* Для мобильных устройств */
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between.align-items-center.mb-4 {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+        }
+
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+    }
+</style>
 {% endblock %}
