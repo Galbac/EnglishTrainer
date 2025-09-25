@@ -1,6 +1,6 @@
 # app/router/words.py
 import random
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, UTC, timezone
 from http.client import HTTPResponse
 
 from fastapi import APIRouter
@@ -39,7 +39,7 @@ def add_word(
         if not word:
             word = Word(english=english.strip(), russian=russian.strip())
             db.add(word)
-            db.flush()  # чтобы получить id без commit
+            db.flush()
 
         user_word = db.query(UserWord).filter_by(user_id=user_id, word_id=word.id).first()
         if not user_word:
@@ -57,10 +57,15 @@ def add_word(
 
 
 @words_router.get('/test', response_class=HTTPResponse)
-def test_page(request: Request, user_id: CurrentUser, db: Session = Depends(get_db)):
+def test_page(request: Request, user_id: CurrentUser, db: Session = Depends(get_db), category: str = None):
     user_words = db.query(UserWord).filter_by(user_id=user_id).all()
     if not user_words:
         return templates.TemplateResponse('test.html', {'request': request, 'word': None})
+
+    if category == 'pending':
+        user_words = [uw for uw in user_words if uw.next_review <= datetime.now(timezone.utc) and uw.progress < 80]
+        if not user_words:
+            return templates.TemplateResponse('test.html', {'request': request, 'word': None})
 
     chosen = random.choice(user_words)
     mode = random.choice(["en->ru", "ru->en"])

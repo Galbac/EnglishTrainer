@@ -1,8 +1,9 @@
 # app/router/auth.py
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import Form
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -28,6 +29,28 @@ def get_password_hash(password):
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
+@auth_router.get('/')
+def index(request: Request):
+    return RedirectResponse(url="/dashboard", status_code=303)
+@auth_router.get('/profile', response_class=HTMLResponse)
+def profile_page(request: Request, user_id: CurrentUser, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user})
+
+
+@auth_router.post('/profile')
+def update_profile(request: Request,
+                   user_id: CurrentUser,
+                   email: str = Form(...),
+                   receive_reminders: bool = Form(False),
+                   db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    user.email = email.strip() if email else None
+    user.receive_reminders = receive_reminders
+    db.commit()
+    flash(request, "Настройки сохранены!", "success")
+    return RedirectResponse(url="/profile", status_code=303)
 
 
 @auth_router.get('/register', response_class=HTMLResponse)
@@ -80,7 +103,7 @@ def dashboard(request: Request, user_id: CurrentUser, db: Session = Depends(get_
     total_words = len(words)
     mastered_words = sum(1 for word in words if word.progress >= 80)
     last_reviewed = max((word.next_review for word in words), default=None)
-    pending_reviews = [word for word in words if word.next_review <= datetime.utcnow()]
+    pending_reviews = [word for word in words if word.next_review <= datetime.now(timezone.utc)]
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "words": words,
                                                          "total_words": total_words,
                                                          "mastered_words": mastered_words,
@@ -91,7 +114,7 @@ def dashboard(request: Request, user_id: CurrentUser, db: Session = Depends(get_
 
 @auth_router.get('/logout', response_class=HTMLResponse)
 def logout(request: Request):
-    flash(request, "Вы вышли из системы!", "success")
     if "user_id" in request.session:
         del request.session["user_id"]
+        flash(request, "Вы вышли из системы!", "success")
     return RedirectResponse(url="/login", status_code=303)

@@ -1,9 +1,10 @@
 # app/model.py
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import List
 
 import sqlalchemy as sa
 from sqlalchemy import ForeignKey
+from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.orm import relationship
 
@@ -15,6 +16,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user: Mapped[str] = mapped_column(unique=True, index=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(nullable=False)
+    email: Mapped[str] = mapped_column(unique=True, index=True, nullable=True)
+    receive_reminders: Mapped[bool] = mapped_column(default=True, server_default=sa.text('true'))
 
     words: Mapped[List['UserWord']] = relationship(back_populates="user")
 
@@ -37,7 +40,11 @@ class UserWord(Base):
     progress: Mapped[int] = mapped_column(default=0)
     easiness: Mapped[float] = mapped_column(default=2.5, server_default="2.5")
     interval: Mapped[int] = mapped_column(default=0, server_default="0")
-    next_review: Mapped[datetime] = mapped_column(default=datetime.now(UTC), server_default=sa.func.now())
+    next_review: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        server_default=sa.text('now()')
+    )
     reviews_count: Mapped[int] = mapped_column(default=0, server_default="0")
 
     user: Mapped['User'] = relationship(back_populates="words")
